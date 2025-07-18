@@ -37,25 +37,17 @@ def test_get_users(client):
     response = client.get('/users/')
 
     assert response.status_code == HTTPStatus.OK
-    assert response.json() == {
-        'users': [
-            {
-                'id': 1,
-                'username': 'lorena',
-                'email': 'lorena@email.com',
-            }
-        ]
-    }
+    assert response.json() == {'users': []}
 
 
-def test_get_one_user(client):
+def test_get_one_user(client, user):
     response = client.get('/users/1')
 
     assert response.status_code == HTTPStatus.OK
     assert response.json() == {
         'id': 1,
-        'username': 'lorena',
-        'email': 'lorena@email.com',
+        'username': 'luna',
+        'email': 'luna@luna.com',
     }
 
 
@@ -66,21 +58,21 @@ def test_get_one_user_id_le_zero(client):
     assert response.json() == {'detail': 'User not found'}
 
 
-def test_update_user(client):
+def test_update_user(client, user):
     response = client.put(
         '/users/1',
         json={
-            'username': 'lorean',
-            'email': 'lorean@email.com',
-            'password': '123',
+            'username': 'luna',
+            'email': 'luna@luna.com',
+            'password': 'luna',
         },
     )
 
     assert response.status_code == HTTPStatus.OK
     assert response.json() == {
         'id': 1,
-        'username': 'lorean',
-        'email': 'lorean@email.com',
+        'username': 'luna',
+        'email': 'luna@luna.com',
     }
 
 
@@ -94,15 +86,15 @@ def test_update_user_id_le_zero(client):
     assert response.json() == {'detail': 'User not found'}
 
 
-def test_delete_user(client):
+def test_delete_user(client, user):
     response = client.delete('/users/1')
 
     assert response.status_code == HTTPStatus.OK
     assert response.json() == {'message': 'User deleted'}
 
 
-def test_delete_user_id_le_zero(client):
+def test_delete_user_id_le_zero(client, user):
     response = client.delete('/users/0')
 
-    assert response.status_code == HTTPStatus.NOT_FOUND
-    assert response.json() == {'detail': 'User not found'}
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+    assert response.json() == {'detail': 'User not valid'}
