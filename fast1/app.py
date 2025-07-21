@@ -2,12 +2,14 @@ from http import HTTPStatus
 
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from fast1.auth import create_access_token, hash_password, verify_password
 from fast1.database import get_session
 from fast1.models import User
-from fast1.schemas import Message, UserPublic, UserSchema, UsersList
+from fast1.schemas import Message, Token, UserPublic, UserSchema, UsersList
 
 app = FastAPI()
 
@@ -33,6 +35,24 @@ def read_html():
 """
 
 
+@app.post('/login', response_model=Token)
+def login(form_data: OAuth2PasswordRequestForm = Depends(),
+          session: Session = Depends(get_session)
+):
+    user = session.scalar(select(User).where(User.email == form_data.username))
+    if not user:
+        raise HTTPException(status_code=HTTPStatus.UNAUTHORIZED,
+                             detail='Incorrect email or password')
+
+    if not verify_password(form_data.password, user.password):
+        raise HTTPException(status_code=HTTPStatus.UNAUTHORIZED,
+                            detail='Incorrect email or password')
+
+    token = create_access_token(data={'sub': user.email})
+
+    return {'access_token': token, 'token_type': 'bearer'}
+
+
 @app.post('/users', status_code=HTTPStatus.CREATED, response_model=UserPublic)
 def create_user(user: UserSchema, session: Session = Depends(get_session)):
     db_user = session.scalar(
@@ -45,9 +65,10 @@ def create_user(user: UserSchema, session: Session = Depends(get_session)):
             status_code=HTTPStatus.CONFLICT,
             detail='User or email already exists',
         )
+    hash = hash_password(user.password)
 
     db_user = User(
-        username=user.username, password=user.password, email=user.email
+        username=user.username, password=hash, email=user.email
     )
 
     session.add(db_user)
@@ -104,7 +125,7 @@ def update_user(
         )
 
     db_user.username = user.username
-    db_user.password = user.password
+    db_user.password = hash_password(user.password)
     db_user.email = user.email
     session.commit()
     session.refresh(db_user)

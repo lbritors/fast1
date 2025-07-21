@@ -15,6 +15,18 @@ def test_exercicio_html_retornar_ola_mundo_em_html(client):
     assert '<h1>Olá mundooooo! Hozier é maravilhoso</h1>' in response.text
 
 
+def test_login(client, user):
+    response = client.post(
+        '/login',
+        data={'username': user.email, 'password': user.plain_password}
+    )
+
+    token = response.json()
+    assert response.status_code == HTTPStatus.OK
+    assert 'access_token' in token
+    assert 'token_type' in token
+
+
 def test_create_user(client):
     response = client.post(
         '/users/',

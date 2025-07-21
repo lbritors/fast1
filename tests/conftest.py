@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
 from fast1.app import app
+from fast1.auth import hash_password
 from fast1.database import get_session
 from fast1.models import User, table_registry
 
@@ -59,9 +60,13 @@ def session():
 
 @pytest.fixture
 def user(session):
-    user = User(username='luna', email='luna@luna.com', password='123')
+    password = '123'
+    user = User(username='luna',
+                email='luna@luna.com',
+                password=hash_password(password))
     session.add(user)
     session.commit()
     session.refresh(user)
 
+    user.plain_password = password
     return user

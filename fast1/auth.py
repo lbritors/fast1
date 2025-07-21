@@ -1,10 +1,10 @@
 import os
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
-from pwdlib import PasswordHash
 
 from dotenv import load_dotenv
 from jwt import encode
+from pwdlib import PasswordHash
 
 load_dotenv()
 
@@ -26,9 +26,10 @@ def create_access_token(data: dict):
 
     return encoded_jwt
 
+
 def hash_password(pwd: str):
     return pwd_context.hash(pwd)
 
 
-def verify_password(plain_pwd:str, hashed_pwd:str):
+def verify_password(plain_pwd: str, hashed_pwd: str):
     return pwd_context.verify(plain_pwd, hashed_pwd)
