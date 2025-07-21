@@ -86,6 +86,29 @@ def test_update_user_id_le_zero(client):
     assert response.json() == {'detail': 'User not found'}
 
 
+def test_update_user_already_exists(client, user):
+    client.post(
+        '/users',
+        json={
+            'username': 'teste',
+            'email': 'teste@exemplo.com',
+            'password': 'pass'
+        },
+    )
+
+    response = client.put(
+        f'/users/{user.id}',
+        json={
+            'username': 'luna',
+            'email': '  teste@exemplo.com',
+            'password': '123',
+        },
+    )
+    
+    assert response.status_code == HTTPStatus.CONFLICT
+    assert response.json() == {'detail': 'User or email already exists'}
+
+
 def test_delete_user(client, user):
     response = client.delete('/users/1')
 
