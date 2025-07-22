@@ -1,9 +1,7 @@
-import os
 from datetime import datetime, timedelta
 from http import HTTPStatus
 from zoneinfo import ZoneInfo
 
-from dotenv import load_dotenv
 from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from jwt import DecodeError, decode, encode
@@ -13,25 +11,22 @@ from sqlalchemy.orm import Session
 
 from fast1.database import get_session
 from fast1.models import User
-
-load_dotenv()
+from fast1.settings import Settings
 
 pwd_context = PasswordHash.recommended()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl='auth/login')
-
-secret_key = os.getenv("SECRET_KEY")
-algorithm = os.getenv("ALGORITHM")
-expire_minutes = int(os.getenv("EXPIRE_MINUTES"))
+settings = Settings()
 
 
 def create_access_token(data: dict):
 
     to_encode = data.copy()
     expire = datetime.now(tz=ZoneInfo('UTC')) + timedelta(
-        minutes=expire_minutes
+        minutes=settings.EXPIRE_MINUTES
     )
     to_encode.update({'exp': expire})
-    encoded_jwt = encode(to_encode, secret_key, algorithm=algorithm)
+    encoded_jwt = encode(to_encode, settings.SECRET_KEY,
+                          algorithm=settings.ALGORITHM)
 
     return encoded_jwt
 
@@ -46,7 +41,8 @@ def get_current_user(
         headers={'WWW-Authenticate': 'Bearer'})
 
     try:
-        payload = decode(token, secret_key, algorithms=[algorithm])
+        payload = decode(token, settings.SECRET_KEY,
+                        algorithms=[settings.ALGORITHM])
         subject_email = payload.get('sub')
         if not subject_email:
             raise credentials_exception

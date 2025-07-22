@@ -2,7 +2,7 @@ from http import HTTPStatus
 
 from jwt import decode
 
-from fast1.auth import create_access_token, secret_key
+from fast1.auth import create_access_token, settings
 
 
 def test_jwt():
@@ -10,7 +10,8 @@ def test_jwt():
 
     token = create_access_token(data)
 
-    decoded = decode(token, secret_key, algorithms=['HS256'])
+    decoded = decode(token, settings.SECRET_KEY,
+                      algorithms=[settings.ALGORITHM])
 
     assert decoded['test'] == data['test']
     assert 'exp' in decoded

@@ -1,19 +1,30 @@
 from http import HTTPStatus
+from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from fast1.auth import get_current_user, hash_password
 from fast1.database import get_session
 from fast1.models import User
-from fast1.schemas import Message, UserPublic, UserSchema, UsersList
+from fast1.schemas import (
+    FilterPage,
+    Message,
+    UserPublic,
+    UserSchema,
+    UsersList,
+)
+
+Session_DB = Annotated[Session, Depends(get_session)]
+Current_User = Annotated[User, Depends(get_current_user)]
 
 router = APIRouter(prefix='/users', tags=['users'])
 
 
 @router.post('/', status_code=HTTPStatus.CREATED, response_model=UserPublic)
-def create_user(user: UserSchema, session: Session = Depends(get_session)):
+def create_user(user: UserSchema, session: Session_DB):
+
     db_user = session.scalar(
         select(User).where(
             (User.username == user.username) | (User.email == user.email)
@@ -38,17 +49,18 @@ def create_user(user: UserSchema, session: Session = Depends(get_session)):
 
 
 @router.get('/', status_code=HTTPStatus.OK, response_model=UsersList)
-def get_users(
-    skip: int = 0, limit: int = 100, session: Session = Depends(get_session)
-):
-    users = session.scalars(select(User).offset(skip).limit(limit)).all()
+def get_users(session: Session_DB,
+            filter_users: Annotated[FilterPage, Query()]):
+
+    users = session.scalars(select(User).offset(filter_users.offset)
+                            .limit(filter_users.limit)).all()
     return {'users': users}
 
 
 @router.get(
     '/{user_id}', status_code=HTTPStatus.OK, response_model=UserPublic
 )
-def get_one_user(user_id: int, session: Session = Depends(get_session)):
+def get_one_user(user_id: int, session: Session_DB):
     if user_id < 0:
         raise HTTPException(HTTPStatus.BAD_REQUEST, detail='User id not valid')
     user = session.scalar(select(User).where(User.id == user_id))
@@ -59,8 +71,8 @@ def get_one_user(user_id: int, session: Session = Depends(get_session)):
 
 @router.put('/{user_id}', response_model=UserPublic)
 def update_user(
-    user_id: int, user: UserSchema, session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user)
+    user_id: int, user: UserSchema, session: Session_DB,
+    current_user: Current_User
 ):
 
     if current_user.id != user_id:
@@ -79,8 +91,8 @@ def update_user(
 
 
 @router.delete('/{user_id}', response_model=Message)
-def delete_user(user_id: int, session: Session = Depends(get_session),
-                current_user: User = Depends(get_current_user)):
+def delete_user(user_id: int, session: Session_DB,
+                current_user: Current_User):
 
     if current_user.id != user_id:
         raise HTTPException(
