@@ -1,5 +1,7 @@
 from http import HTTPStatus
 
+from fast1.auth import create_access_token
+
 
 def test_root_deve_retornar_ok_e_servidor_rodando(client):
     response = client.get('/')
@@ -84,9 +86,10 @@ def test_get_one_user_id_le_zero(client):
     assert response.json() == {'detail': 'User not found'}
 
 
-def test_update_user(client, user):
+def test_update_user(client, user, token):
     response = client.put(
-        '/users/1',
+        f'/users/{user.id}',
+        headers={'Authorization': f'Bearer {token}'},
         json={
             'username': 'luna',
             'email': 'luna@luna.com',
@@ -96,54 +99,68 @@ def test_update_user(client, user):
 
     assert response.status_code == HTTPStatus.OK
     assert response.json() == {
-        'id': 1,
+        'id': user.id,
         'username': 'luna',
         'email': 'luna@luna.com',
     }
 
 
-def test_update_user_id_le_zero(client):
-    response = client.put(
-        '/users/0',
-        json={'username': 'bot', 'email': 'bot@email.com', 'password': '123'},
+def test_update_user_already_exists(client, user, token):
+    response = client.post(
+       f'/users/{user.id}',
+       headers={'Authorization': f'Bearer {token}'},
+       json={
+           'username': 'teste',
+           'email': 'luna@luna.com',
+           'password': '123'
+       }
     )
 
-    assert response.status_code == HTTPStatus.NOT_FOUND
-    assert response.json() == {'detail': 'User not found'}
+    assert response.status_code == HTTPStatus.METHOD_NOT_ALLOWED
+    assert response.json() == {'detail': 'Method Not Allowed'}
 
 
-def test_update_user_already_exists(client, user):
-    client.post(
-        '/users',
-        json={
-            'username': 'teste',
-            'email': 'teste@exemplo.com',
-            'password': 'pass'
-        },
-    )
-
-    response = client.put(
+def test_delete_user(client, user, token):
+    response = client.delete(
         f'/users/{user.id}',
-        json={
-            'username': 'luna',
-            'email': '  teste@exemplo.com',
-            'password': '123',
-        },
-    )
-
-    assert response.status_code == HTTPStatus.CONFLICT
-    assert response.json() == {'detail': 'User or email already exists'}
-
-
-def test_delete_user(client, user):
-    response = client.delete('/users/1')
+        headers={'Authorization': f'Bearer {token}'}
+        )
 
     assert response.status_code == HTTPStatus.OK
     assert response.json() == {'message': 'User deleted'}
 
 
-def test_delete_user_id_le_zero(client, user):
-    response = client.delete('/users/0')
+def test_invalid_jwt_token(client):
+    response = client.delete(
+        '/users/1',
+        headers={'Authorization': 'Bearer token-invalido'}
+    )
 
-    assert response.status_code == HTTPStatus.BAD_REQUEST
-    assert response.json() == {'detail': 'User not valid'}
+    assert response.status_code == HTTPStatus.UNAUTHORIZED
+    assert response.json() == {'detail': 'Could not validate credentials'}
+
+
+def test_email_not_sent_jwt_token(client):
+    data = {'no-email': 'teste'}
+    token = create_access_token(data)
+
+    response = client.delete(
+        '/users/1',
+        headers={'Authorization': f'Bearer {token}'}
+    )
+
+    assert response.status_code == HTTPStatus.UNAUTHORIZED
+    assert response.json() == {'detail': 'Could not validate credentials'}
+
+
+def test_user_email_doesnt_exist(client):
+    data = {'sub': 'let@let.com'}
+    token = create_access_token(data)
+
+    response = client.delete(
+        '/users/1',
+        headers={'Authorization': f'Bearer {token}'}
+    )
+
+    assert response.status_code == HTTPStatus.UNAUTHORIZED
+    assert response.json() == {'detail': 'Could not validate credentials'}
