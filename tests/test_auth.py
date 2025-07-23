@@ -1,11 +1,13 @@
 from http import HTTPStatus
 
+import pytest
 from jwt import decode
 
 from fast1.auth import create_access_token, settings
 
 
-def test_jwt():
+@pytest.mark.asyncio
+async def test_jwt():
     data = {'test': 'test'}
 
     token = create_access_token(data)
@@ -17,8 +19,9 @@ def test_jwt():
     assert 'exp' in decoded
 
 
-def test_invalid_jwt_token(client):
-    response = client.delete(
+@pytest.mark.asyncio
+async def test_invalid_jwt_token(client):
+    response = await client.delete(
         '/users/1',
         headers={'Authorization': 'Bearer token-invalido'}
     )
@@ -27,8 +30,9 @@ def test_invalid_jwt_token(client):
     assert response.json() == {'detail': 'Could not validate credentials'}
 
 
-def test_login(client, user):
-    response = client.post(
+@pytest.mark.asyncio
+async def test_login(client, user):
+    response = await client.post(
         '/auth/login',
         data={'username': user.email, 'password': user.plain_password}
     )

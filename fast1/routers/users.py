@@ -3,7 +3,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from fast1.auth import get_current_user, hash_password
 from fast1.database import get_session
@@ -16,18 +16,19 @@ from fast1.schemas import (
     UsersList,
 )
 
-Session_DB = Annotated[Session, Depends(get_session)]
+Session_DB = Annotated[AsyncSession, Depends(get_session)]
 Current_User = Annotated[User, Depends(get_current_user)]
 
 router = APIRouter(prefix='/users', tags=['users'])
 
 
 @router.post('/', status_code=HTTPStatus.CREATED, response_model=UserPublic)
-def create_user(user: UserSchema, session: Session_DB):
+async def create_user(user: UserSchema, session: Session_DB):
 
-    db_user = session.scalar(
+    db_user = await session.scalar(
         select(User).where(
-            (User.username == user.username) | (User.email == user.email)
+            (User.username == user.username) |
+            (User.email == user.email)
         )
     )
     if db_user:
@@ -42,35 +43,36 @@ def create_user(user: UserSchema, session: Session_DB):
     )
 
     session.add(db_user)
-    session.commit()
-    session.refresh(db_user)
+    await session.commit()
+    await session.refresh(db_user)
 
     return db_user
 
 
 @router.get('/', status_code=HTTPStatus.OK, response_model=UsersList)
-def get_users(session: Session_DB,
+async def get_users(session: Session_DB,
             filter_users: Annotated[FilterPage, Query()]):
 
-    users = session.scalars(select(User).offset(filter_users.offset)
-                            .limit(filter_users.limit)).all()
+    query = await session.scalars(select(User).offset(filter_users.offset)
+                            .limit(filter_users.limit))
+    users = query.all()
     return {'users': users}
 
 
 @router.get(
     '/{user_id}', status_code=HTTPStatus.OK, response_model=UserPublic
 )
-def get_one_user(user_id: int, session: Session_DB):
+async def get_one_user(user_id: int, session: Session_DB):
     if user_id < 0:
         raise HTTPException(HTTPStatus.BAD_REQUEST, detail='User id not valid')
-    user = session.scalar(select(User).where(User.id == user_id))
+    user = await session.scalar(select(User).where(User.id == user_id))
     if not user:
         raise HTTPException(HTTPStatus.NOT_FOUND, detail='User not found')
     return user
 
 
 @router.put('/{user_id}', response_model=UserPublic)
-def update_user(
+async def update_user(
     user_id: int, user: UserSchema, session: Session_DB,
     current_user: Current_User
 ):
@@ -84,14 +86,14 @@ def update_user(
     current_user.username = user.username
     current_user.password = hash_password(user.password)
     current_user.email = user.email
-    session.commit()
-    session.refresh(current_user)
+    await session.commit()
+    await session.refresh(current_user)
 
     return current_user
 
 
 @router.delete('/{user_id}', response_model=Message)
-def delete_user(user_id: int, session: Session_DB,
+async def delete_user(user_id: int, session: Session_DB,
                 current_user: Current_User):
 
     if current_user.id != user_id:
@@ -99,7 +101,7 @@ def delete_user(user_id: int, session: Session_DB,
             status_code=HTTPStatus.FORBIDDEN, detail='No permission'
         )
 
-    session.delete(current_user)
-    session.commit()
+    await session.delete(current_user)
+    await session.commit()
 
     return {'message': 'User deleted'}
