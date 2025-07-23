@@ -2,28 +2,37 @@ from logging.config import fileConfig
 import asyncio
 from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import create_async_engine
+import os  # Importe o módulo os
 from pathlib import Path  # Importe o Path
 from dotenv import load_dotenv  
 from alembic import context
 
 root_dir = Path(__file__).parent.parent
 dotenv_path = root_dir / '.env'
-
 if dotenv_path.exists():
-    print(f"Carregando variáveis de ambiente de: {dotenv_path}")
-    load_dotenv(dotenv_path=dotenv_path)
+    load_dotenv(dotenv_path=dotenv_path, override=True)
 else:
     print(f"Atenção: arquivo .env não encontrado em {dotenv_path}")
 
 
+from alembic import context
+from sqlalchemy import pool
+from sqlalchemy.ext.asyncio import create_async_engine
 from fast1.models import table_registry
-from fast1.settings import Settings
+
+
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL or 'aiosqlite' not in DATABASE_URL:
+    raise ValueError(
+        f"DATABASE_URL inválida ou não encontrada: '{DATABASE_URL}'. "
+        "Verifique seu arquivo .env e se ele contém 'sqlite+aiosqlite'."
+    )
+
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
-settings = Settings()
-config.set_main_option('sqlalchemy.url', settings.DATABASE_URL)
+config.set_main_option('sqlalchemy.url', DATABASE_URL)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
@@ -79,7 +88,7 @@ async def run_async_migrations():
 
 
     connectable = create_async_engine(
-        Settings().DATABASE_URL,
+        DATABASE_URL,
         poolclass=pool.NullPool
     )
 
