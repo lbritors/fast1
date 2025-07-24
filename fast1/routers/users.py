@@ -2,7 +2,7 @@ from http import HTTPStatus
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from fast1.auth import get_current_user, hash_password
@@ -82,6 +82,21 @@ async def update_user(
             status_code=HTTPStatus.FORBIDDEN,
             detail='No permission'
         )
+
+    query = select(User).where(
+        and_(
+            or_(User.username == user.username,
+            User.email == user.email),
+            User.id != current_user.id
+        )
+    )
+    result = await session.execute(query)
+    exist = result.scalar_one_or_none()
+    if exist:
+        raise HTTPException(
+        status_code=HTTPStatus.CONFLICT,
+        detail='User already exists'
+    )
 
     current_user.username = user.username
     current_user.password = hash_password(user.password)

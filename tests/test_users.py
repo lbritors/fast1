@@ -4,6 +4,7 @@ import pytest
 
 from fast1.auth import create_access_token
 from fast1.schemas import UserPublic
+from tests.conftest import UserFactory
 
 
 @pytest.mark.asyncio
@@ -26,13 +27,13 @@ async def test_create_user(client):
 
 
 @pytest.mark.asyncio
-async def test_create_user_that_already_exists(client, user):
+async def test_create_user_that_already_exists(client, user: UserFactory):
     response = await client.post(
         '/users/',
         json={
-            'username': 'luna',
-            'email': 'luna@luna.com',
-            'password': '123'
+            'username': user.username,
+            'email': user.email,
+            'password': user.password
         }
     )
 
@@ -56,14 +57,14 @@ async def test_get_users_with_users(client, user):
 
 
 @pytest.mark.asyncio
-async def test_get_one_user(client, user):
+async def test_get_one_user(client, user: UserFactory):
     response = await client.get('/users/1')
 
     assert response.status_code == HTTPStatus.OK
     assert response.json() == {
         'id': 1,
-        'username': 'luna',
-        'email': 'luna@luna.com',
+        'username': user.username,
+        'email': user.email,
     }
 
 
@@ -96,19 +97,36 @@ async def test_update_user(client, user, token):
 
 
 @pytest.mark.asyncio
-async def test_update_user_already_exists(client, user, token):
-    response = await client.post(
+async def test_update_user_already_exists(client, user: UserFactory,
+                                        other_user: UserFactory, token):
+    response = await client.put(
        f'/users/{user.id}',
        headers={'Authorization': f'Bearer {token}'},
        json={
-           'username': 'teste',
-           'email': 'luna@luna.com',
-           'password': '123'
+           'username': user.username,
+           'email': other_user.email,
+           'password': user.password
        }
     )
 
-    assert response.status_code == HTTPStatus.METHOD_NOT_ALLOWED
-    assert response.json() == {'detail': 'Method Not Allowed'}
+    assert response.status_code == HTTPStatus.CONFLICT
+    assert response.json() == {'detail': 'User already exists'}
+
+
+@pytest.mark.asyncio
+async def test_update_user_with_wrong_id(client, user, token):
+    response = await client.put(
+        f'/users/{user.id + 1}',
+        headers={'Authorization': f'Bearer {token}'},
+        json={
+            'username': 'luna',
+            'email': 'luna@luna.com',
+            'password': '123'
+        }
+    )
+
+    assert response.status_code == HTTPStatus.FORBIDDEN
+    assert response.json() == {'detail': 'No permission'}
 
 
 @pytest.mark.asyncio
@@ -120,6 +138,17 @@ async def test_delete_user(client, user, token):
 
     assert response.status_code == HTTPStatus.OK
     assert response.json() == {'message': 'User deleted'}
+
+
+@pytest.mark.asyncio
+async def test_delete_user_wrong_id(client, other_user, token):
+    response = await client.delete(
+        f'/users/{other_user.id}',
+        headers={'Authorization': f'Bearer {token}'},
+    )
+
+    assert response.status_code == HTTPStatus.FORBIDDEN
+    assert response.json() == {'detail': 'No permission'}
 
 
 @pytest.mark.asyncio
