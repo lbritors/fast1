@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from fast1 import database
-from fast1.routers import auth, users
+from fast1.routers import auth, tasks, users
 from fast1.schemas import Message
 from fast1.settings import Settings
 
@@ -28,6 +28,7 @@ app = FastAPI()
 
 app.include_router(users.router)
 app.include_router(auth.router)
+app.include_router(tasks.router)
 
 
 @app.get('/', status_code=HTTPStatus.OK, response_model=Message)

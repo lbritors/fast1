@@ -3,7 +3,7 @@ from dataclasses import asdict
 import pytest
 from sqlalchemy import select
 
-from fast1.models import User
+from fast1.models import Task, User
 
 
 @pytest.mark.asyncio
@@ -21,4 +21,28 @@ async def test_create_user(session, mock_db_time):
         'email': 'luna@luna.com',
         'created_at': time,
         'updated_at': time,
+        'tasks': [],
+    }
+
+
+@pytest.mark.asyncio
+async def test_create_task(session, user):
+    task = Task(
+        name='teste',
+        description='oi',
+        state='todo',
+        user_id=user.id
+    )
+
+    session.add(task)
+    await session.commit()
+
+    task = await session.scalar(select(Task))
+
+    assert asdict(task) == {
+        'id': 1,
+        'name': 'teste',
+        'description': 'oi',
+        'state': 'todo',
+        'user_id': 1
     }

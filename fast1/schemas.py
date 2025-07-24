@@ -30,3 +30,14 @@ class Token(BaseModel):
 class FilterPage(BaseModel):
     offset: int = Field(0, ge=0)
     limit: int = Field(100, ge=1)
+
+
+class TasksRead(BaseModel):
+    id: int
+    name: str
+    description: str
+
+
+class TasksCreate(BaseModel):
+    name: str
+    description: str
