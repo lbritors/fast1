@@ -46,3 +46,21 @@ async def test_create_task(session, user):
         'state': 'todo',
         'user_id': 1
     }
+
+
+@pytest.mark.asyncio
+async def test_user_task_relationship(user: User, session):
+    task = Task(
+        name='task',
+        description='do smt',
+        state='todo',
+        user_id=user.id
+    )
+
+    session.add(task)
+    await session.commit()
+    await session.refresh(user)
+
+    user = await session.scalar(select(User).where(User.id == user.id))
+
+    assert user.tasks == [task]

@@ -1,5 +1,7 @@
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
+from fast1.models import TaskState
+
 
 class Message(BaseModel):
     message: str
@@ -36,8 +38,20 @@ class TasksRead(BaseModel):
     id: int
     name: str
     description: str
+    state: TaskState
 
 
 class TasksCreate(BaseModel):
     name: str
     description: str
+    state: TaskState
+
+
+class TaskList(BaseModel):
+    tasks: list[TasksRead]
+
+
+class TaskFilter(FilterPage):
+    name: str | None = Field(None, min_length=3, max_length=20)
+    description: str | None = Field(None, min_length=3, max_length=20)
+    state: TaskState | None = None
