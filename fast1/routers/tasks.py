@@ -1,7 +1,7 @@
 from http import HTTPStatus
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -55,3 +55,17 @@ async def get_tasks(user: Current_User, session: Session_DB,
                                   limit(task_filter.limit))
 
     return {'tasks': tasks.all()}
+
+
+@router.get('/{task_id}', status_code=HTTPStatus.OK, response_model=TasksRead)
+async def get_one_task(task_id: int, user: Current_User, session: Session_DB):
+
+    query = select(Task).where(
+        Task.user_id == user.id,
+        Task.id == task_id)
+
+    task = await session.scalar(query)
+    if not task:
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND,
+                            detail='Not found')
+    return task

@@ -39,6 +39,7 @@ class TasksRead(BaseModel):
     name: str
     description: str
     state: TaskState
+    user_id: int
 
 
 class TasksCreate(BaseModel):

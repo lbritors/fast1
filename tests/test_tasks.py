@@ -24,7 +24,8 @@ async def test_create_task(client, token):
         json={
             'name': 'hoje',
             'description': 'exercicios',
-            'state': 'todo'
+            'state': 'todo',
+            'user_id': 1
         }
     )
 
@@ -33,7 +34,8 @@ async def test_create_task(client, token):
         'id': 1,
         'name': 'hoje',
         'description': 'exercicios',
-        'state': 'todo'
+        'state': 'todo',
+        'user_id': 1
     }
 
 
@@ -150,3 +152,26 @@ async def test_get_tasks_filter_should_return_all_filters(
     )
 
     assert len(response.json()['tasks']) == tasks_qnt
+
+
+@pytest.mark.asyncio
+async def test_get_one_task(client, session, token, user):
+
+    session.add(TaskFactory.create(user_id=user.id,
+                                   name='estudar',
+                                   description='ler 2 cap',
+                                   state=TaskState.doing))
+    await session.commit()
+    response = await client.get(
+        '/tasks/1',
+        headers={'Authorization': f'Bearer {token}'}
+    )
+
+    print(response.json())
+    assert response.json() == {
+        'id': 1,
+        'name': 'estudar',
+        'description': 'ler 2 cap',
+        'state': 'doing',
+        'user_id': 1
+    }
