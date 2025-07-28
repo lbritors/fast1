@@ -8,7 +8,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from fast1.auth import get_current_user
 from fast1.database import get_session
 from fast1.models import Task, User
-from fast1.schemas import TaskFilter, TaskList, TasksCreate, TasksRead
+from fast1.schemas import (
+    TaskFilter,
+    TaskList,
+    TasksCreate,
+    TasksRead,
+    TasksUpdate,
+)
 
 router = APIRouter(prefix='/tasks', tags=['tasks'])
 
@@ -69,3 +75,26 @@ async def get_one_task(task_id: int, user: Current_User, session: Session_DB):
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND,
                             detail='Not found')
     return task
+
+
+@router.patch('/{task_id}', status_code=HTTPStatus.OK,
+               response_model=TasksRead)
+async def update_task(task_id: int, user: Current_User, session: Session_DB,
+                      task: TasksUpdate):
+
+    db_task = await session.scalar(select(Task).where(Task.user_id == user.id,
+                                                      Task.id == task_id))
+
+    if not db_task:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND, detail='Not found'
+        )
+
+    for key, value in task.model_dump(exclude_unset=True).items():
+        setattr(db_task, key, value)
+
+    session.add(db_task)
+    await session.commit()
+    await session.refresh(db_task)
+
+    return db_task

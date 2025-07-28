@@ -167,7 +167,6 @@ async def test_get_one_task(client, session, token, user):
         headers={'Authorization': f'Bearer {token}'}
     )
 
-    print(response.json())
     assert response.json() == {
         'id': 1,
         'name': 'estudar',
@@ -175,3 +174,35 @@ async def test_get_one_task(client, session, token, user):
         'state': 'doing',
         'user_id': 1
     }
+
+
+@pytest.mark.asyncio
+async def test_update_task(client, session, token, user):
+    task = TaskFactory(user_id=user.id)
+
+    session.add(task)
+    await session.commit()
+
+    response = await client.patch(
+        f'/tasks/{task.id}',
+        json={'name': 'teste'},
+        headers={'Authorization': f'Bearer {token}'}
+    )
+
+    assert response.status_code == HTTPStatus.OK
+    assert response.json()['name'] == 'teste'
+
+
+@pytest.mark.asyncio
+async def test_update_task_not_found(client, token):
+
+    response = await client.patch(
+        '/tasks/2',
+        json={'name': 'teste'},
+        headers={'Authorization': f'Bearer {token}'}
+    )
+
+    print(response.json())
+
+    assert response.status_code == HTTPStatus.NOT_FOUND
+    assert response.json() == {'detail': 'Not found'}

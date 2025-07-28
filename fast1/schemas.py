@@ -48,6 +48,12 @@ class TasksCreate(BaseModel):
     state: TaskState
 
 
+class TasksUpdate(BaseModel):
+    name: str | None = None
+    description: str | None = None
+    state: TaskState | None = None
+
+
 class TaskList(BaseModel):
     tasks: list[TasksRead]
 
