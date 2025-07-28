@@ -9,6 +9,7 @@ from fast1.auth import get_current_user
 from fast1.database import get_session
 from fast1.models import Task, User
 from fast1.schemas import (
+    Message,
     TaskFilter,
     TaskList,
     TasksCreate,
@@ -98,3 +99,23 @@ async def update_task(task_id: int, user: Current_User, session: Session_DB,
     await session.refresh(db_task)
 
     return db_task
+
+
+@router.delete('/{task_id}', status_code=HTTPStatus.OK,
+               response_model=Message)
+async def delete_task(user: Current_User, task_id: int,
+                      session: Session_DB):
+
+    db_task = await session.scalar(select(Task).where(Task.id == task_id,
+                                          Task.user_id == user.id))
+
+    if not db_task:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND,
+            detail='Not found'
+        )
+
+    await session.delete(db_task)
+    await session.commit()
+
+    return {'message': 'Task deleted'}

@@ -202,6 +202,35 @@ async def test_update_task_not_found(client, token):
         headers={'Authorization': f'Bearer {token}'}
     )
 
+    assert response.status_code == HTTPStatus.NOT_FOUND
+    assert response.json() == {'detail': 'Not found'}
+
+
+@pytest.mark.asyncio
+async def test_delete_task(client, token, user, session):
+    task = TaskFactory(user_id=user.id)
+
+    session.add(task)
+    await session.commit()
+
+    response = await client.delete(
+        f'/tasks/{task.id}',
+        headers={'Authorization': f'Bearer {token}'}
+    )
+
+    assert response.status_code == HTTPStatus.OK
+    assert response.json() == {
+        'message': 'Task deleted'
+    }
+
+
+@pytest.mark.asyncio
+async def test_delete_task_not_exist(client, token):
+    response = await client.delete(
+        '/tasks/2',
+        headers={'Authorization': f'Bearer {token}'}
+    )
+
     print(response.json())
 
     assert response.status_code == HTTPStatus.NOT_FOUND
