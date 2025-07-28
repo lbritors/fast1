@@ -17,17 +17,17 @@ class TaskFactory(factory.Factory):
 
 
 @pytest.mark.asyncio
-async def test_create_task(client, token):
-    response = await client.post(
-        '/tasks/',
-        headers={'Authorization': f'Bearer {token}'},
-        json={
-            'name': 'hoje',
-            'description': 'exercicios',
-            'state': 'todo',
-            'user_id': 1
-        }
-    )
+async def test_create_task(client, token, mock_db_time):
+    with mock_db_time(model=Task) as time:
+        response = await client.post(
+            '/tasks/',
+            headers={'Authorization': f'Bearer {token}'},
+            json={
+                'name': 'hoje',
+                'description': 'exercicios',
+                'state': 'todo'
+            }
+        )
 
     assert response.status_code == HTTPStatus.CREATED
     assert response.json() == {
@@ -35,7 +35,9 @@ async def test_create_task(client, token):
         'name': 'hoje',
         'description': 'exercicios',
         'state': 'todo',
-        'user_id': 1
+        'user_id': 1,
+        'created_at': time.isoformat(),
+        'updated_at': time.isoformat()
     }
 
 
@@ -155,24 +157,27 @@ async def test_get_tasks_filter_should_return_all_filters(
 
 
 @pytest.mark.asyncio
-async def test_get_one_task(client, session, token, user):
-
-    session.add(TaskFactory.create(user_id=user.id,
-                                   name='estudar',
-                                   description='ler 2 cap',
-                                   state=TaskState.doing))
-    await session.commit()
-    response = await client.get(
-        '/tasks/1',
-        headers={'Authorization': f'Bearer {token}'}
-    )
+async def test_get_one_task(client, session, token, user,
+                            mock_db_time):
+    with mock_db_time(model=Task) as time:
+        session.add(TaskFactory.create(user_id=user.id,
+                                    name='estudar',
+                                    description='ler 2 cap',
+                                    state=TaskState.doing))
+        await session.commit()
+        response = await client.get(
+            '/tasks/1',
+            headers={'Authorization': f'Bearer {token}'}
+        )
 
     assert response.json() == {
         'id': 1,
         'name': 'estudar',
         'description': 'ler 2 cap',
         'state': 'doing',
-        'user_id': 1
+        'user_id': 1,
+        'created_at': time.isoformat(),
+        'updated_at': time.isoformat()
     }
 
 

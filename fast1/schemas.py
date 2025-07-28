@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 from fast1.models import TaskState
@@ -40,6 +42,8 @@ class TasksRead(BaseModel):
     description: str
     state: TaskState
     user_id: int
+    created_at: datetime
+    updated_at: datetime
 
 
 class TasksCreate(BaseModel):
